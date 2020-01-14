@@ -345,13 +345,13 @@ local function treeSetConnectorsAndIcons(tree)
     if overwrite and doc then doc:SetActive() end
     if overwrite and not ApproveFileOverwrite() then return false end
 
-    if not fn:Mkdir(tonumber(755,8), wx.wxPATH_MKDIR_FULL) then
+    if not fn:Mkdir(tonumber("755",8), wx.wxPATH_MKDIR_FULL) then
       ide:ReportError(TR("Unable to create directory '%s'."):format(target))
       return false
     end
 
     if isnew then -- new directory or file; create manually
-      if (isdir and not wx.wxFileName.DirName(target):Mkdir(tonumber(755,8), wx.wxPATH_MKDIR_FULL))
+      if (isdir and not wx.wxFileName.DirName(target):Mkdir(tonumber("755",8), wx.wxPATH_MKDIR_FULL))
       or (not isdir and not FileWrite(target, "")) then
         ide:ReportError(TR("Unable to create file '%s'."):format(target))
         return false
@@ -837,6 +837,14 @@ local function treeSetConnectorsAndIcons(tree)
       end
     end)
 
+  if ide.wxver >= "3.1.3" then
+    -- provide workaround for white background in a focused item in the tree
+    -- on Linux when the tree itself is unfocused (may be gtk3-only issue);
+    -- enable on all platforms, as the brackground is low contrast on MacOS
+    -- and blue-colored on Windows
+    tree:Connect(wx.wxEVT_KILL_FOCUS, function(event) tree:ClearFocusedItem() end)
+  end
+
   local itemsrc
   tree:Connect(wx.wxEVT_COMMAND_TREE_BEGIN_DRAG,
     function (event)
@@ -1006,14 +1014,18 @@ function FileTreeMarkSelected(file)
     end
     if item_id then
       if not projtree:IsVisible(item_id) then
-        if ide.osname ~= "Unix" then projtree:Freeze() end
         projtree:EnsureVisible(item_id)
         -- it's supposed to be enough to do EnsureVisible,
         -- but occasionally it's positioned one item too high (wxwidgets 3.1.1 on Win),
         -- so scroll to make sure the item really is visible
         projtree:ScrollTo(item_id)
         projtree:SetScrollPos(wx.wxHORIZONTAL, 0, true)
-        if ide.osname ~= "Unix" then projtree:Thaw() end
+        if ide.osname == "Windows" then
+          -- the following is a workaround for SetScrollPos not scrolling in wxwidgets 3.1.3
+          -- https://trac.wxwidgets.org/ticket/18543
+          projtree:Freeze()
+          projtree:Thaw()
+        end
       end
       projtree:SetItemBold(item_id, true)
       PackageEventHandle("onFiletreeFileMarkSelected", projtree, item_id, file, true)

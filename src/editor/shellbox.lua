@@ -22,7 +22,6 @@ console:SetFont(ide:CreateFont(config.fontsize or 10, wx.wxFONTFAMILY_MODERN, wx
   config.fontencoding or wx.wxFONTENCODING_DEFAULT)
 )
 console:StyleSetFont(wxstc.wxSTC_STYLE_DEFAULT, console:GetFont())
-console:SetBufferedDraw(not ide.config.hidpi and true or false)
 console:StyleClearAll()
 
 console:SetTabWidth(ide.config.editor.tabwidth or 2)
@@ -319,6 +318,7 @@ local function executeShellCode(tx)
   DisplayShellPrompt('')
 
   -- try to compile as statement
+  local loadstring = loadstring or load
   local _, err = loadstring(tx)
   local isstatement = not err
 
