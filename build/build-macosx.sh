@@ -191,12 +191,16 @@ fi
 
 # build Lua
 if [ $BUILD_LUA ]; then
-  if [ $BUILD_JIT ]; then
-    git clone "$LUA_URL" "$LUA_BASENAME"
-    (cd "$LUA_BASENAME"; git checkout v2.0.4)
-  else
-    curl -L "$LUA_URL" > "$LUA_FILENAME" || { echo "Error: failed to download Lua"; exit 1; }
-    tar -xzf "$LUA_FILENAME"
+  if [[ ! -d "$LFS_BASENAME" ]]
+  then
+    if [ $BUILD_JIT ]; then
+      git clone "$LUA_URL" "$LUA_BASENAME"
+      (cd "$LUA_BASENAME"; git checkout v2.0.4)
+    else
+      curl -L "$LUA_URL" > "$LUA_FILENAME" || { echo "Error: failed to download Lua"; exit 1; }
+      tar -xzf "$LUA_FILENAME"
+      rm "$LUA_FILENAME"
+    fi
   fi
   cd "$LUA_BASENAME"
 
@@ -226,15 +230,23 @@ if [ $BUILD_LUA ]; then
   [ $DEBUGBUILD ] || strip -u -r "$INSTALL_DIR/bin/lua$LUAS"
   [ -f "$INSTALL_DIR/lib/liblua$LUAS.dylib" ] || { echo "Error: liblua$LUAS.dylib isn't found"; exit 1; }
   cd ..
-  rm -rf "$LUA_FILENAME" "$LUA_BASENAME"
+  # rm -rf "$LUA_BASENAME"
 fi
 
 # build lexlpeg
 if [ $BUILD_LEXLPEG ]; then
   # need wxwidgets/Scintilla and lua files
-  git clone "$WXWIDGETS_URL" "$WXWIDGETS_BASENAME" || { echo "Error: failed to get wxWidgets"; exit 1; }
-  curl -L "$LEXLPEG_URL" > "$LEXLPEG_FILENAME" || { echo "Error: failed to download LexLPeg"; exit 1; }
-  unzip "$LEXLPEG_FILENAME"
+  if [[ ! -d "$LFS_BASENAME" ]]
+  then
+    if [[ ! -d "$WXWIDGETS_BASENAME" ]]
+    then
+      git clone "$WXWIDGETS_URL" "$WXWIDGETS_BASENAME" || { echo "Error: failed to get wxWidgets"; exit 1; }
+    fi
+    curl -L "$LEXLPEG_URL" > "$LEXLPEG_FILENAME" || { echo "Error: failed to download LexLPeg"; exit 1; }
+    unzip "$LEXLPEG_FILENAME"
+    rm "$LEXLPEG_FILENAME"
+  fi
+
   cd "$LEXLPEG_BASENAME"
 
   # comment out loading lpeg as it's causing issues with _luaopen_lpeg symbol
@@ -251,15 +263,18 @@ if [ $BUILD_LEXLPEG ]; then
   [ $DEBUGBUILD ] || strip -u -r "$INSTALL_DIR/lib/lua/$LUAV/lexlpeg.dylib"
 
   cd ..
-  rm -rf "$LEXLPEG_BASENAME" "$LEXLPEG_FILENAME"
+  # rm -rf "$LEXLPEG_BASENAME"
   # don't delete wxwidgets, if it's requested to be built
-  [ $BUILD_WXWIDGETS ] || rm -rf "$WXWIDGETS_BASENAME"
+  # [ $BUILD_WXWIDGETS ] || rm -rf "$WXWIDGETS_BASENAME"
 fi
 
 # build wxWidgets
 if [ $BUILD_WXWIDGETS ]; then
   # don't clone again, as it's already cloned for lexlpeg
-  [ $BUILD_LEXLPEG ] || git clone "$WXWIDGETS_URL" "$WXWIDGETS_BASENAME" || { echo "Error: failed to get wxWidgets"; exit 1; }
+  if [[ ! -d "$WXWIDGETS_BASENAME" ]]
+  then
+    [ $BUILD_LEXLPEG ] || git clone "$WXWIDGETS_URL" "$WXWIDGETS_BASENAME" || { echo "Error: failed to get wxWidgets"; exit 1; }
+  fi
   cd "$WXWIDGETS_BASENAME"
 
   # checkout the version that was used in wxwidgets upgrade to 3.1.x
@@ -293,12 +308,15 @@ if [ $BUILD_WXWIDGETS ]; then
   make $MAKEFLAGS || { echo "Error: failed to build wxWidgets"; exit 1; }
   make install
   cd ..
-  rm -rf "$WXWIDGETS_BASENAME"
+  # rm -rf "$WXWIDGETS_BASENAME"
 fi
 
 # build wxLua
 if [ $BUILD_WXLUA ]; then
-  git clone "$WXLUA_URL" "$WXLUA_BASENAME" || { echo "Error: failed to get wxlua"; exit 1; }
+  if [[ ! -d "$WXLUA_BASENAME" ]]
+  then
+    git clone "$WXLUA_URL" "$WXLUA_BASENAME" || { echo "Error: failed to get wxlua"; exit 1; }
+  fi
   cd "$WXLUA_BASENAME/wxLua"
 
   git checkout v3.0.0.8
@@ -326,13 +344,17 @@ if [ $BUILD_WXLUA ]; then
   install_name_tool -id libwx.dylib "$INSTALL_DIR/lib/libwx.dylib"
   [ $DEBUGBUILD ] || strip -u -r "$INSTALL_DIR/lib/libwx.dylib"
   cd ../..
-  rm -rf "$WXLUA_BASENAME"
+  # rm -rf "$WXLUA_BASENAME"
 fi
 
 # build LuaSocket
 if [ $BUILD_LUASOCKET ]; then
-  curl -L "$LUASOCKET_URL" > "$LUASOCKET_FILENAME" || { echo "Error: failed to download LuaSocket"; exit 1; }
-  unzip "$LUASOCKET_FILENAME"
+  if [[ ! -d "$LUASOCKET_BASENAME" ]]
+  then
+    curl -L "$LUASOCKET_URL" > "$LUASOCKET_FILENAME" || { echo "Error: failed to download LuaSocket"; exit 1; }
+    unzip "$LUASOCKET_FILENAME"
+    rm "$LUASOCKET_FILENAME"
+  fi
   cd "$LUASOCKET_BASENAME"
   mkdir -p "$INSTALL_DIR/lib/lua/$LUAV/"{mime,socket}
   gcc $BUILD_FLAGS -install_name core.dylib -o "$INSTALL_DIR/lib/lua/$LUAV/mime/core.dylib" src/mime.c \
@@ -347,14 +369,18 @@ if [ $BUILD_LUASOCKET ]; then
   [ -f "$INSTALL_DIR/lib/lua/$LUAV/socket/core.dylib" ] || { echo "Error: socket/core.dylib isn't found"; exit 1; }
   [ $DEBUGBUILD ] || strip -u -r "$INSTALL_DIR/lib/lua/$LUAV/mime/core.dylib" "$INSTALL_DIR/lib/lua/$LUAV/socket/core.dylib"
   cd ..
-  rm -rf "$LUASOCKET_FILENAME" "$LUASOCKET_BASENAME"
+# rm -rf "$LUASOCKET_BASENAME"
 fi
 
 # build lfs
 if [ $BUILD_LFS ]; then
-  curl -L "$LFS_URL" > "$LFS_FILENAME" || { echo "Error: failed to download lfs"; exit 1; }
-  tar -xzf "$LFS_FILENAME"
-  mv "luafilesystem-$LFS_BASENAME" "$LFS_BASENAME"
+  if [[ ! -d "$LFS_BASENAME" ]]
+  then
+    curl -L "$LFS_URL" > "$LFS_FILENAME" || { echo "Error: failed to download lfs"; exit 1; }
+    tar -xzf "$LFS_FILENAME"
+    mv "luafilesystem-$LFS_BASENAME" "$LFS_BASENAME"
+    rm "$LFS_FILENAME"
+  fi
   cd "$LFS_BASENAME/src"
   mkdir -p "$INSTALL_DIR/lib/lua/$LUAV/"
   gcc $BUILD_FLAGS -install_name lfs.dylib -o "$INSTALL_DIR/lib/lua/$LUAV/lfs.dylib" lfs.c \
@@ -362,13 +388,17 @@ if [ $BUILD_LFS ]; then
   [ -f "$INSTALL_DIR/lib/lua/$LUAV/lfs.dylib" ] || { echo "Error: lfs.dylib isn't found"; exit 1; }
   [ $DEBUGBUILD ] || strip -u -r "$INSTALL_DIR/lib/lua/$LUAV/lfs.dylib"
   cd ../..
-  rm -rf "$LFS_FILENAME" "$LFS_BASENAME"
+  # rm -rf $LFS_BASENAME"
 fi
 
 # build lpeg
 if [ $BUILD_LPEG ]; then
-  curl -L "$LPEG_URL" > "$LPEG_FILENAME" || { echo "Error: failed to download lpeg"; exit 1; }
-  tar -xzf "$LPEG_FILENAME"
+  if [[ ! -d "$LFS_BASENAME" ]]
+  then
+    curl -L "$LPEG_URL" > "$LPEG_FILENAME" || { echo "Error: failed to download lpeg"; exit 1; }
+    tar -xzf "$LPEG_FILENAME"
+    rm "$LPEG_FILENAME"
+  fi
   cd "$LPEG_BASENAME"
   mkdir -p "$INSTALL_DIR/lib/lua/$LUAV/"
   gcc $BUILD_FLAGS -install_name lpeg.dylib -o "$INSTALL_DIR/lib/lua/$LUAV/lpeg.dylib" lptree.c lpvm.c lpcap.c lpcode.c lpprint.c \
@@ -376,14 +406,18 @@ if [ $BUILD_LPEG ]; then
   [ -f "$INSTALL_DIR/lib/lua/$LUAV/lpeg.dylib" ] || { echo "Error: lpeg.dylib isn't found"; exit 1; }
   [ $DEBUGBUILD ] || strip -u -r "$INSTALL_DIR/lib/lua/$LUAV/lpeg.dylib"
   cd ..
-  rm -rf "$LPEG_FILENAME" "$LPEG_BASENAME"
+  # rm -rf "$LPEG_BASENAME"
 fi
 
 # build LuaSec
 if [ $BUILD_LUASEC ]; then
   # build openSSL
-  curl -L "$OPENSSL_URL" > "$OPENSSL_FILENAME" || { echo "Error: failed to download OpenSSL"; exit 1; }
-  tar -xzf "$OPENSSL_FILENAME"
+  if [[ ! -d "$OPENSSL_BASENAME" ]]
+  then
+    curl -L "$OPENSSL_URL" > "$OPENSSL_FILENAME" || { echo "Error: failed to download OpenSSL"; exit 1; }
+    tar -xzf "$OPENSSL_FILENAME"
+    rm "$OPENSSL_FILENAME"
+  fi
   cd "$OPENSSL_BASENAME"
   perl ./Configure darwin64-x86_64-cc shared
   # add minimal macos SDK
@@ -399,11 +433,15 @@ if [ $BUILD_LUASEC ]; then
     || { echo "Error: failed to update libssl for libcrypto @loader_path"; exit 1; }
   [ $DEBUGBUILD ] || strip -u -r "$INSTALL_DIR/lib/libcrypto.dylib" "$INSTALL_DIR/lib/libssl.dylib"
   cd ..
-  rm -rf "$OPENSSL_FILENAME" "$OPENSSL_BASENAME"
+  # rm -rf "$OPENSSL_BASENAME"
 
   # build LuaSec
-  curl -L "$LUASEC_URL" > "$LUASEC_FILENAME" || { echo "Error: failed to download LuaSec"; exit 1; }
-  unzip "$LUASEC_FILENAME"
+  if [[ ! -d "$LUASEC_BASENAME" ]]
+  then
+    curl -L "$LUASEC_URL" > "$LUASEC_FILENAME" || { echo "Error: failed to download LuaSec"; exit 1; }
+    unzip "$LUASEC_FILENAME"
+    rm "$LUASEC_FILENAME"
+  fi
   cd "$LUASEC_BASENAME"
   mkdir -p "$INSTALL_DIR/lib/lua/$LUAV/"
   gcc $BUILD_FLAGS -install_name ssl.dylib -o "$INSTALL_DIR/lib/lua/$LUAV/ssl.dylib" \
@@ -426,7 +464,7 @@ if [ $BUILD_LUASEC ]; then
   install_name_tool -add_rpath @loader_path/.. "$INSTALL_DIR/lib/lua/$LUAV/ssl.dylib"
   [ $DEBUGBUILD ] || strip -u -r "$INSTALL_DIR/lib/lua/$LUAV/ssl.dylib"
   cd ..
-  rm -rf "$LUASEC_FILENAME" "$LUASEC_BASENAME"
+# rm -rf "$LUASEC_BASENAME"
 fi
 
 [ -d "$BIN_DIR/clibs" ] || mkdir -p "$BIN_DIR/clibs" || { echo "Error: cannot create directory $BIN_DIR/clibs"; exit 1; }

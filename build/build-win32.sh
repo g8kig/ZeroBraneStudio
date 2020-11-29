@@ -25,7 +25,7 @@ WXWIDGETS_BASENAME="wxWidgets"
 WXWIDGETS_URL="https://github.com/pkulchenko/wxWidgets.git"
 
 WXLUA_BASENAME="wxlua"
-WXLUA_URL="https://github.com/pkulchenko/wxlua.git"
+WXLUA_URL="https://github.com/g8kig/wxlua.git"
 
 LUASOCKET_BASENAME="luasocket-3.0-rc1"
 LUASOCKET_FILENAME="v3.0-rc1.zip"
@@ -198,12 +198,16 @@ fi
 
 # build Lua
 if [ $BUILD_LUA ]; then
-  if [ $BUILD_JIT ]; then
-    git clone "$LUA_URL" "$LUA_BASENAME"
-    (cd "$LUA_BASENAME"; git checkout v2.0.4)
-  else
-    wget -c "$LUA_URL" -O "$LUA_FILENAME" || { echo "Error: failed to download Lua"; exit 1; }
-    tar -xzf "$LUA_FILENAME"
+  if [[ ! -d "$LUA_BASENAME" ]]
+  then
+    if [ $BUILD_JIT ]; then
+      git clone "$LUA_URL" "$LUA_BASENAME"
+      (cd "$LUA_BASENAME"; git checkout v2.0.4)
+    else
+      wget -c "$LUA_URL" -O "$LUA_FILENAME" || { echo "Error: failed to download Lua"; exit 1; }
+      tar -xzf "$LUA_FILENAME"
+      rm "$LUA_FILENAME"
+    fi
   fi
   cd "$LUA_BASENAME"
   if [ $BUILD_JIT ]; then
@@ -229,15 +233,22 @@ EOF
   [ -f "$INSTALL_DIR/lib/lua$LUAV.dll" ] || { echo "Error: lua$LUAV.dll isn't found"; exit 1; }
   [ $DEBUGBUILD ] || strip --strip-unneeded "$INSTALL_DIR/lib/lua$LUAV.dll"
   cd ..
-  rm -rf "$LUA_FILENAME" "$LUA_BASENAME"
+# rm -rf $LUA_BASENAME"
 fi
 
 # build lexlpeg
 if [ $BUILD_LEXLPEG ]; then
   # need wxwidgets/Scintilla and lua files
-  git clone "$WXWIDGETS_URL" "$WXWIDGETS_BASENAME" || { echo "Error: failed to get wxWidgets"; exit 1; }
-  wget --no-check-certificate -c "$LEXLPEG_URL" -O "$LEXLPEG_FILENAME" || { echo "Error: failed to download LexLPeg"; exit 1; }
-  unzip "$LEXLPEG_FILENAME"
+  if [[ ! -d "$WXWIDGETS_BASENAME" ]]
+  then
+    git clone "$WXWIDGETS_URL" "$WXWIDGETS_BASENAME" || { echo "Error: failed to get wxWidgets"; exit 1; }
+  fi
+  if [[ ! -d "$LEXLPEG_BASENAME" ]]
+  then
+    wget --no-check-certificate -c "$LEXLPEG_URL" -O "$LEXLPEG_FILENAME" || { echo "Error: failed to download LexLPeg"; exit 1; }
+    unzip "$LEXLPEG_FILENAME"
+    rm "$LEXLPEG_FILENAME"
+  fi
   cd "$LEXLPEG_BASENAME"
 
   # replace loading lpeg with os and debug as they are needed for debugging;
@@ -258,15 +269,18 @@ if [ $BUILD_LEXLPEG ]; then
   [ -f "$INSTALL_DIR/lib/lua/$LUAV/lexlpeg.dll" ] || { echo "Error: LexLPeg.dll isn't found"; exit 1; }
   [ $DEBUGBUILD ] || strip --strip-unneeded "$INSTALL_DIR/lib/lua/$LUAV/lexlpeg.dll"
   cd ..
-  rm -rf "$LEXLPEG_BASENAME" "$LEXLPEG_FILENAME"
+  # rm -rf "$LEXLPEG_BASENAME"
   # don't delete wxwidgets, if it's requested to be built
-  [ $BUILD_WXWIDGETS ] || rm -rf "$WXWIDGETS_BASENAME"
+  # [ $BUILD_WXWIDGETS ] || rm -rf "$WXWIDGETS_BASENAME"
 fi
 
 # build wxWidgets
 if [ $BUILD_WXWIDGETS ]; then
   # don't clone again, as it's already cloned for lexlpeg
-  [ $BUILD_LEXLPEG ] || git clone "$WXWIDGETS_URL" "$WXWIDGETS_BASENAME" || { echo "Error: failed to get wxWidgets"; exit 1; }
+  if [[ ! -d "$WXWIDGETS_BASENAME" ]]
+  then
+    [ $BUILD_LEXLPEG ] || git clone "$WXWIDGETS_URL" "$WXWIDGETS_BASENAME" || { echo "Error: failed to get wxWidgets"; exit 1; }
+  fi
   cd "$WXWIDGETS_BASENAME"
 
   # checkout the version that was used in wxwidgets upgrade to 3.1.x
@@ -290,12 +304,14 @@ if [ $BUILD_WXWIDGETS ]; then
   make $MAKEFLAGS || { echo "Error: failed to build wxWidgets"; exit 1; }
   make install
   cd ..
-  rm -rf "$WXWIDGETS_BASENAME"
+  # rm -rf "$WXWIDGETS_BASENAME"
 fi
 
 # build wxLua
 if [ $BUILD_WXLUA ]; then
-  git clone "$WXLUA_URL" "$WXLUA_BASENAME" || { echo "Error: failed to get wxlua"; exit 1; }
+  if [[ ! -d "$WXLUA_BASENAME" ]]
+    then  git clone "$WXLUA_URL" "$WXLUA_BASENAME" || { echo "Error: failed to get wxlua"; exit 1; }
+  fi
   cd "$WXLUA_BASENAME/wxLua"
 
   git checkout v3.0.0.8
@@ -318,13 +334,17 @@ if [ $BUILD_WXLUA ]; then
   [ -f "$INSTALL_DIR/bin/libwx.dll" ] || { echo "Error: libwx.dll isn't found"; exit 1; }
   [ $DEBUGBUILD ] || strip --strip-unneeded "$INSTALL_DIR/bin/libwx.dll"
   cd ../..
-  rm -rf "$WXLUA_BASENAME"
+  # rm -rf "$WXLUA_BASENAME"
 fi
 
 # build LuaSocket
 if [ $BUILD_LUASOCKET ]; then
-  wget --no-check-certificate -c "$LUASOCKET_URL" -O "$LUASOCKET_FILENAME" || { echo "Error: failed to download LuaSocket"; exit 1; }
-  unzip "$LUASOCKET_FILENAME"
+  if [[ ! -d "$LUASOCKET_BASENAME" ]]
+  then
+    wget --no-check-certificate -c "$LUASOCKET_URL" -O "$LUASOCKET_FILENAME" || { echo "Error: failed to download LuaSocket"; exit 1; }
+    unzip "$LUASOCKET_FILENAME"
+    rm -rf "$LUASOCKET_FILENAME"
+  fi
   cd "$LUASOCKET_BASENAME"
   mkdir -p "$INSTALL_DIR/lib/lua/$LUAV/"{mime,socket}
   gcc $BUILD_FLAGS -o "$INSTALL_DIR/lib/lua/$LUAV/mime/core.dll" src/mime.c -llua$LUAV \
@@ -339,14 +359,18 @@ if [ $BUILD_LUASOCKET ]; then
   [ -f "$INSTALL_DIR/lib/lua/$LUAV/socket/core.dll" ] || { echo "Error: socket/core.dll isn't found"; exit 1; }
   [ $DEBUGBUILD ] || strip --strip-unneeded "$INSTALL_DIR/lib/lua/$LUAV/socket/core.dll" "$INSTALL_DIR/lib/lua/$LUAV/mime/core.dll"
   cd ..
-  rm -rf "$LUASOCKET_FILENAME" "$LUASOCKET_BASENAME"
+  # rm -rf "$LUASOCKET_BASENAME"
 fi
 
 # build lfs
 if [ $BUILD_LFS ]; then
-  wget --no-check-certificate -c "$LFS_URL" -O "$LFS_FILENAME" || { echo "Error: failed to download lfs"; exit 1; }
-  tar -xzf "$LFS_FILENAME"
-  mv "luafilesystem-$LFS_BASENAME" "$LFS_BASENAME"
+  if [[ ! -d "$LFS_BASENAME" ]]
+  then
+    wget --no-check-certificate -c "$LFS_URL" -O "$LFS_FILENAME" || { echo "Error: failed to download lfs"; exit 1; }
+    tar -xzf "$LFS_FILENAME"
+    mv "luafilesystem-$LFS_BASENAME" "$LFS_BASENAME"
+    rm "$LFS_FILENAME"
+  fi
   cd "$LFS_BASENAME/src"
   mkdir -p "$INSTALL_DIR/lib/lua/$LUAV/"
   gcc $BUILD_FLAGS -o "$INSTALL_DIR/lib/lua/$LUAV/lfs.dll" lfs.c -llua$LUAV \
@@ -354,14 +378,17 @@ if [ $BUILD_LFS ]; then
   [ -f "$INSTALL_DIR/lib/lua/$LUAV/lfs.dll" ] || { echo "Error: lfs.dll isn't found"; exit 1; }
   [ $DEBUGBUILD ] || strip --strip-unneeded "$INSTALL_DIR/lib/lua/$LUAV/lfs.dll"
   cd ../..
-  rm -rf "$LFS_FILENAME" "$LFS_BASENAME"
+  # rm -rf "$LFS_BASENAME"
 fi
 
 
 # build lpeg
 if [ $BUILD_LPEG ]; then
-  wget --no-check-certificate -c "$LPEG_URL" -O "$LPEG_FILENAME" || { echo "Error: failed to download lpeg"; exit 1; }
-  tar -xzf "$LPEG_FILENAME"
+  if [[ ! -d "$LPEG_BASENAME" ]]
+  then
+    wget --no-check-certificate -c "$LPEG_URL" -O "$LPEG_FILENAME" || { echo "Error: failed to download lpeg"; exit 1; }
+    tar -xzf "$LPEG_FILENAME"
+  fi
   cd "$LPEG_BASENAME"
   mkdir -p "$INSTALL_DIR/lib/lua/$LUAV/"
   gcc $BUILD_FLAGS -o "$INSTALL_DIR/lib/lua/$LUAV/lpeg.dll" lptree.c lpvm.c lpcap.c lpcode.c lpprint.c -llua$LUAV \
@@ -369,14 +396,18 @@ if [ $BUILD_LPEG ]; then
   [ -f "$INSTALL_DIR/lib/lua/$LUAV/lpeg.dll" ] || { echo "Error: lpeg.dll isn't found"; exit 1; }
   [ $DEBUGBUILD ] || strip --strip-unneeded "$INSTALL_DIR/lib/lua/$LUAV/lpeg.dll"
   cd ..
-  rm -rf "$LPEG_FILENAME" "$LPEG_BASENAME"
+  # rm -rf "$LPEG_FILENAME" "$LPEG_BASENAME"
 fi
 
 # build LuaSec
 if [ $BUILD_LUASEC ]; then
   # build openSSL
-  wget --no-check-certificate -c "$OPENSSL_URL" -O "$OPENSSL_FILENAME" || { echo "Error: failed to download OpenSSL"; exit 1; }
-  tar -xzf "$OPENSSL_FILENAME"
+  if [[ ! -d "$OPENSSL_BASENAME" ]]
+  then
+    wget --no-check-certificate -c "$OPENSSL_URL" -O "$OPENSSL_FILENAME" || { echo "Error: failed to download OpenSSL"; exit 1; }
+    tar -xzf "$OPENSSL_FILENAME"
+    rm "$OPENSSL_FILENAME"
+  fi
   cd "$OPENSSL_BASENAME"
   # change `mingw` to `mingw64` to build 64bit library
   RANLIB="$(which ranlib)" perl ./Configure mingw shared
@@ -385,11 +416,15 @@ if [ $BUILD_LUASEC ]; then
   make install_sw INSTALLTOP="$INSTALL_DIR"
   [ $DEBUGBUILD ] || strip --strip-unneeded "$INSTALL_DIR/bin/libcrypto-*.dll" "$INSTALL_DIR/bin/libssl-*.dll"
   cd ..
-  rm -rf "$OPENSSL_FILENAME" "$OPENSSL_BASENAME"
+  # rm -rf "$OPENSSL_BASENAME"
 
   # build LuaSec
-  wget --no-check-certificate -c "$LUASEC_URL" -O "$LUASEC_FILENAME" || { echo "Error: failed to download LuaSec"; exit 1; }
-  unzip "$LUASEC_FILENAME"
+  if [[ ! -d "$LUASEC_BASENAME" ]]
+  then
+    wget --no-check-certificate -c "$LUASEC_URL" -O "$LUASEC_FILENAME" || { echo "Error: failed to download LuaSec"; exit 1; }
+    unzip "$LUASEC_FILENAME"
+    rm "$LUASEC_FILENAME"
+  fi
   cd "$LUASEC_BASENAME"
   mkdir -p "$INSTALL_DIR/lib/lua/$LUAV/"
   gcc $BUILD_FLAGS -o "$INSTALL_DIR/lib/lua/$LUAV/ssl.dll" \
@@ -403,12 +438,15 @@ if [ $BUILD_LUASEC ]; then
   [ -f "$INSTALL_DIR/lib/lua/$LUAV/ssl.dll" ] || { echo "Error: ssl.dll isn't found"; exit 1; }
   [ $DEBUGBUILD ] || strip --strip-unneeded "$INSTALL_DIR/lib/lua/$LUAV/ssl.dll"
   cd ..
-  rm -rf "$LUASEC_FILENAME" "$LUASEC_BASENAME"
+# rm -rf "$LUASEC_BASENAME"
 fi
 
 # build winapi
 if [ $BUILD_WINAPI ]; then
-  git clone "$WINAPI_URL" "$WINAPI_BASENAME"
+  if [[ ! -d "$WINAPI_BASENAME" ]]
+  then
+    git clone "$WINAPI_URL" "$WINAPI_BASENAME"
+  fi
   cd "$WINAPI_BASENAME"
   mkdir -p "$INSTALL_DIR/lib/lua/$LUAV/"
   gcc $BUILD_FLAGS -DPSAPI_VERSION=1 -o "$INSTALL_DIR/lib/lua/$LUAV/winapi.dll" winapi.c wutils.c -lpsapi -lmpr -llua$LUAV \
@@ -416,7 +454,7 @@ if [ $BUILD_WINAPI ]; then
   [ -f "$INSTALL_DIR/lib/lua/$LUAV/winapi.dll" ] || { echo "Error: winapi.dll isn't found"; exit 1; }
   [ $DEBUGBUILD ] || strip --strip-unneeded "$INSTALL_DIR/lib/lua/$LUAV/winapi.dll"
   cd ..
-  rm -rf "$WINAPI_BASENAME"
+# rm -rf "$WINAPI_BASENAME"
 fi
 
 # build ZBS launcher

@@ -204,12 +204,16 @@ fi
 
 # build Lua
 if [ $BUILD_LUA ]; then
-  if [ $BUILD_JIT ]; then
-    git clone "$LUA_URL" "$LUA_BASENAME"
-    (cd "$LUA_BASENAME"; git checkout v2.0.4)
+  if [[ ! -d "$LUA_BASENAME" ]]
+  then
+    if [ $BUILD_JIT ]; then
+      git clone "$LUA_URL" "$LUA_BASENAME"
+      (cd "$LUA_BASENAME"; git checkout v2.0.4)
+    fi
   else
     wget -c "$LUA_URL" -O "$LUA_FILENAME" || { echo "Error: failed to download Lua"; exit 1; }
     tar -xzf "$LUA_FILENAME"
+    rm "$LUA_FILENAME"
   fi
   cd "$LUA_BASENAME"
 
@@ -228,15 +232,19 @@ if [ $BUILD_LUA ]; then
   [ $DEBUGBUILD ] || strip --strip-unneeded "$INSTALL_DIR/bin/lua$LUAV"
 
   cd ..
-  rm -rf "$LUA_FILENAME" "$LUA_BASENAME"
+  #rm -rf "$LUA_BASENAME"
 fi
 
 # build lexlpeg
 if [ $BUILD_LEXLPEG ]; then
   # need wxwidgets/Scintilla and lua files
-  git clone "$WXWIDGETS_URL" "$WXWIDGETS_BASENAME" || { echo "Error: failed to get wxWidgets"; exit 1; }
-  wget --no-check-certificate -c "$LEXLPEG_URL" -O "$LEXLPEG_FILENAME" || { echo "Error: failed to download LexLPeg"; exit 1; }
-  unzip "$LEXLPEG_FILENAME"
+  if [[ ! -d "$LEXLPEG_BASENAME" ]]
+  then
+    git clone "$WXWIDGETS_URL" "$WXWIDGETS_BASENAME" || { echo "Error: failed to get wxWidgets"; exit 1; }
+    wget --no-check-certificate -c "$LEXLPEG_URL" -O "$LEXLPEG_FILENAME" || { echo "Error: failed to download LexLPeg"; exit 1; }
+    unzip "$LEXLPEG_FILENAME"
+    rm "$LEXLPEG_FILENAME"
+  fi
   cd "$LEXLPEG_BASENAME"
 
   # replace loading lpeg with os and debug as they are needed for debugging;
@@ -253,15 +261,18 @@ if [ $BUILD_LEXLPEG ]; then
   [ $DEBUGBUILD ] || strip --strip-unneeded "$INSTALL_DIR/lib/lua/$LUAV/lexlpeg.so"
 
   cd ..
-  rm -rf "$LEXLPEG_BASENAME" "$LEXLPEG_FILENAME"
+# rm -rf "$LEXLPEG_BASENAME"
   # don't delete wxwidgets, if it's requested to be built
-  [ $BUILD_WXWIDGETS ] || rm -rf "$WXWIDGETS_BASENAME"
+# [ $BUILD_WXWIDGETS ] || rm -rf "$WXWIDGETS_BASENAME"
 fi
 
 # build wxWidgets
 if [ $BUILD_WXWIDGETS ]; then
    # don't clone again, as it's already cloned for lexlpeg
-  [ $BUILD_LEXLPEG ] || git clone "$WXWIDGETS_URL" "$WXWIDGETS_BASENAME" || { echo "Error: failed to get wxWidgets"; exit 1; }
+  if [[ ! -d "$WXWIDGETS_BASENAME" ]]
+  then
+    [ $BUILD_LEXLPEG ] || git clone "$WXWIDGETS_URL" "$WXWIDGETS_BASENAME" || { echo "Error: failed to get wxWidgets"; exit 1; }
+  fi
   cd "$WXWIDGETS_BASENAME"
 
   # checkout the version that was used in wxwidgets upgrade to 3.1.x
@@ -289,14 +300,16 @@ if [ $BUILD_WXWIDGETS ]; then
   make $MAKEFLAGS || { echo "Error: failed to build wxWidgets"; exit 1; }
   make install
   cd ..
-  rm -rf "$WXWIDGETS_BASENAME"
+# rm -rf "$WXWIDGETS_BASENAME"
 fi
 
 # build wxLua
 if [ $BUILD_WXLUA ]; then
-  git clone "$WXLUA_URL" "$WXLUA_BASENAME" || { echo "Error: failed to get wxlua"; exit 1; }
-  cd "$WXLUA_BASENAME/wxLua"
-
+  if [[ ! -d "$WXLUA_BASENAME" ]]
+  then
+    git clone "$WXLUA_URL" "$WXLUA_BASENAME" || { echo "Error: failed to get wxlua"; exit 1; }
+    cd "$WXLUA_BASENAME/wxLua"
+  fi
   git checkout v3.0.0.8
 
   cmake -G "Unix Makefiles" -DCMAKE_INSTALL_PREFIX="$INSTALL_DIR" \
@@ -312,13 +325,17 @@ if [ $BUILD_WXLUA ]; then
   [ -f "$INSTALL_DIR/lib/libwx.so" ] || { echo "Error: libwx.so isn't found"; exit 1; }
   [ $DEBUGBUILD ] || strip --strip-unneeded "$INSTALL_DIR/lib/libwx.so"
   cd ../..
-  rm -rf "$WXLUA_BASENAME"
+# rm -rf "$WXLUA_BASENAME"
 fi
 
 # build LuaSocket
 if [ $BUILD_LUASOCKET ]; then
-  wget --no-check-certificate -c "$LUASOCKET_URL" -O "$LUASOCKET_FILENAME" || { echo "Error: failed to download LuaSocket"; exit 1; }
-  unzip "$LUASOCKET_FILENAME"
+  if [[ ! -d "$LUASOCKET_BASENAME" ]]
+  then
+    wget --no-check-certificate -c "$LUASOCKET_URL" -O "$LUASOCKET_FILENAME" || { echo "Error: failed to download LuaSocket"; exit 1; }
+    unzip "$LUASOCKET_FILENAME"
+    rm "$LUASOCKET_FILENAME"
+  fi
   cd "$LUASOCKET_BASENAME"
   mkdir -p "$INSTALL_DIR/lib/lua/$LUAV/"{mime,socket}
   gcc $BUILD_FLAGS -o "$INSTALL_DIR/lib/lua/$LUAV/mime/core.so" src/mime.c \
@@ -333,14 +350,18 @@ if [ $BUILD_LUASOCKET ]; then
   [ -f "$INSTALL_DIR/lib/lua/$LUAV/socket/core.so" ] || { echo "Error: socket/core.so isn't found"; exit 1; }
   [ $DEBUGBUILD ] || strip --strip-unneeded "$INSTALL_DIR/bin/lua/$LUAV/socket/core.so" "$INSTALL_DIR/bin/lua/$LUAV/mime/core.so"
   cd ..
-  rm -rf "$LUASOCKET_FILENAME" "$LUASOCKET_BASENAME"
+# rm -rf "$LUASOCKET_BASENAME"
 fi
 
 # build lfs
 if [ $BUILD_LFS ]; then
-  wget --no-check-certificate -c "$LFS_URL" -O "$LFS_FILENAME" || { echo "Error: failed to download lfs"; exit 1; }
-  tar -xzf "$LFS_FILENAME"
-  mv "luafilesystem-$LFS_BASENAME" "$LFS_BASENAME"
+  if [[ ! -d "$LFS_BASENAME" ]]
+  then
+    wget --no-check-certificate -c "$LFS_URL" -O "$LFS_FILENAME" || { echo "Error: failed to download lfs"; exit 1; }
+    tar -xzf "$LFS_FILENAME"  
+    mv "luafilesystem-$LFS_BASENAME" "$LFS_BASENAME"
+    rm "$LFS_FILENAME"
+  fi
   cd "$LFS_BASENAME/src"
   mkdir -p "$INSTALL_DIR/lib/lua/$LUAV/"
   gcc $BUILD_FLAGS -o "$INSTALL_DIR/lib/lua/$LUAV/lfs.so" lfs.c \
@@ -348,13 +369,17 @@ if [ $BUILD_LFS ]; then
   [ -f "$INSTALL_DIR/lib/lua/$LUAV/lfs.so" ] || { echo "Error: lfs.so isn't found"; exit 1; }
   [ $DEBUGBUILD ] || strip --strip-unneeded "$INSTALL_DIR/bin/lua/$LUAV/lfs.so"
   cd ../..
-  rm -rf "$LFS_FILENAME" "$LFS_BASENAME"
+# rm -rf $LFS_BASENAME"
 fi
 
 # build lpeg
 if [ $BUILD_LPEG ]; then
-  wget --no-check-certificate -c "$LPEG_URL" -O "$LPEG_FILENAME" || { echo "Error: failed to download lpeg"; exit 1; }
-  tar -xzf "$LPEG_FILENAME"
+  if [[ ! -d "$LPEG_BASENAME" ]]
+  then
+    wget --no-check-certificate -c "$LPEG_URL" -O "$LPEG_FILENAME" || { echo "Error: failed to download lpeg"; exit 1; }
+    tar -xzf "$LPEG_FILENAME"
+    rm "$LPEG_FILENAME"
+  fi
   cd "$LPEG_BASENAME"
   mkdir -p "$INSTALL_DIR/lib/lua/$LUAV/"
   gcc $BUILD_FLAGS -o "$INSTALL_DIR/lib/lua/$LUAV/lpeg.so" lptree.c lpvm.c lpcap.c lpcode.c lpprint.c \
@@ -362,14 +387,18 @@ if [ $BUILD_LPEG ]; then
   [ -f "$INSTALL_DIR/lib/lua/$LUAV/lpeg.so" ] || { echo "Error: lpeg.so isn't found"; exit 1; }
   [ $DEBUGBUILD ] || strip --strip-unneeded "$INSTALL_DIR/bin/lua/$LUAV/lpeg.so"
   cd ..
-  rm -rf "$LPEG_FILENAME" "$LPEG_BASENAME"
+# rm -rf "$LPEG_BASENAME"
 fi
 
 # build LuaSec
 if [ $BUILD_LUASEC ]; then
   # build openSSL
-  wget --no-check-certificate -c "$OPENSSL_URL" -O "$OPENSSL_FILENAME" || { echo "Error: failed to download OpenSSL"; exit 1; }
-  tar -xzf "$OPENSSL_FILENAME"
+  if [[ ! -d "$OPENSSL_BASENAME" ]]
+  then
+    wget --no-check-certificate -c "$OPENSSL_URL" -O "$OPENSSL_FILENAME" || { echo "Error: failed to download OpenSSL"; exit 1; }
+    tar -xzf "$OPENSSL_FILENAME"
+    rm "$OPENSSL_FILENAME"
+  fi
   cd "$OPENSSL_BASENAME"
   ./config shared
 
@@ -378,11 +407,15 @@ if [ $BUILD_LUASEC ]; then
   make install_sw INSTALLTOP="$INSTALL_DIR"
   [ $DEBUGBUILD ] || strip --strip-unneeded "$INSTALL_DIR/lib/libcrypto.so" "$INSTALL_DIR/lib/libssl.so"
   cd ..
-  rm -rf "$OPENSSL_FILENAME" "$OPENSSL_BASENAME"
+# rm -rf "$OPENSSL_BASENAME"
 
   # build LuaSec
-  wget --no-check-certificate -c "$LUASEC_URL" -O "$LUASEC_FILENAME" || { echo "Error: failed to download LuaSec"; exit 1; }
-  unzip "$LUASEC_FILENAME"
+  if [[ ! -d "$LUASEC_BASENAME" ]]
+  then
+    wget --no-check-certificate -c "$LUASEC_URL" -O "$LUASEC_FILENAME" || { echo "Error: failed to download LuaSec"; exit 1; }
+    unzip "$LUASEC_FILENAME"
+    rm -rf "$LUASEC_FILENAME"
+  fi
   cd "$LUASEC_BASENAME"
   mkdir -p "$INSTALL_DIR/lib/lua/$LUAV/"
   gcc $BUILD_FLAGS -o "$INSTALL_DIR/lib/lua/$LUAV/ssl.so" \
@@ -397,7 +430,7 @@ if [ $BUILD_LUASEC ]; then
   [ -f "$INSTALL_DIR/lib/lua/$LUAV/ssl.so" ] || { echo "Error: ssl.so isn't found"; exit 1; }
   [ $DEBUGBUILD ] || strip --strip-unneeded "$INSTALL_DIR/lib/lua/$LUAV/ssl.so"
   cd ..
-  rm -rf "$LUASEC_FILENAME" "$LUASEC_BASENAME"
+# rm -rf "$LUASEC_BASENAME"
 fi
 
 [ -d "$BIN_DIR/clibs" ] || mkdir -p "$BIN_DIR/clibs" || { echo "Error: cannot create directory $BIN_DIR/clibs"; exit 1; }
