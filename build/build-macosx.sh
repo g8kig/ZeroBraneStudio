@@ -319,7 +319,7 @@ if [ $BUILD_WXLUA ]; then
   fi
   cd "$WXLUA_BASENAME/wxLua"
 
-  git checkout v3.0.0.8
+  git checkout v3.0.0.8-fix
 
   MINSDK=""
   if [ -d $MACOSX_SDK_PATH ]; then

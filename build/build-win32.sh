@@ -314,7 +314,7 @@ if [ $BUILD_WXLUA ]; then
   fi
   cd "$WXLUA_BASENAME/wxLua"
 
-  git checkout v3.0.0.8
+  git checkout v3.0.0.8-fix
 
   sed -i 's|:-/\(.\)/|:-\1:/|' "$INSTALL_DIR/bin/wx-config"
 
