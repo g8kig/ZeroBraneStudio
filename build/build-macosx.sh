@@ -32,10 +32,10 @@ BUILD_FLAGS="-Os -dynamiclib -undefined dynamic_lookup $MACOSX_FLAGS -I $INSTALL
 
 # paths configuration
 WXWIDGETS_BASENAME="wxWidgets"
-WXWIDGETS_URL="https://github.com/pkulchenko/wxWidgets.git"
+WXWIDGETS_URL="https://github.com/g8kig/wxWidgets.git"
 
 WXLUA_BASENAME="wxlua"
-WXLUA_URL="https://github.com/pkulchenko/wxlua.git"
+WXLUA_URL="https://github.com/g8kig/wxlua.git"
 
 LUASOCKET_BASENAME="luasocket-3.0-rc1"
 LUASOCKET_FILENAME="v3.0-rc1.zip"

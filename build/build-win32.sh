@@ -22,7 +22,7 @@ BUILD_FLAGS="-Os -static-libgcc -shared -s -I $INSTALL_DIR/include -L $INSTALL_D
 
 # paths configuration
 WXWIDGETS_BASENAME="wxWidgets"
-WXWIDGETS_URL="https://github.com/pkulchenko/wxWidgets.git"
+WXWIDGETS_URL="https://github.com/g8kig/wxWidgets.git"
 
 WXLUA_BASENAME="wxlua"
 WXLUA_URL="https://github.com/g8kig/wxlua.git"

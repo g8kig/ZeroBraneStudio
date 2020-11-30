@@ -41,10 +41,10 @@ BUILD_FLAGS="-Os -shared -s -I $INSTALL_DIR/include -L $INSTALL_DIR/lib $FPIC"
 
 # paths configuration
 WXWIDGETS_BASENAME="wxWidgets"
-WXWIDGETS_URL="https://github.com/pkulchenko/wxWidgets.git"
+WXWIDGETS_URL="https://github.com/g8kig/wxWidgets.git"
 
 WXLUA_BASENAME="wxlua"
-WXLUA_URL="https://github.com/pkulchenko/wxlua.git"
+WXLUA_URL="https://github.com/g8kig/wxlua.git"
 
 LUASOCKET_BASENAME="luasocket-3.0-rc1"
 LUASOCKET_FILENAME="v3.0-rc1.zip"
