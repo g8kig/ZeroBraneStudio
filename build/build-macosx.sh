@@ -195,7 +195,7 @@ if [ $BUILD_LUA ]; then
   then
     if [ $BUILD_JIT ]; then
       git clone "$LUA_URL" "$LUA_BASENAME"
-      (cd "$LUA_BASENAME"; git checkout v2.0.4)
+      (cd "$LUA_BASENAME"; git reset --hard && git clean -f -d ; git checkout v2.0.4)
     else
       curl -L "$LUA_URL" > "$LUA_FILENAME" || { echo "Error: failed to download Lua"; exit 1; }
       tar -xzf "$LUA_FILENAME"
@@ -203,7 +203,7 @@ if [ $BUILD_LUA ]; then
     fi
   fi
   cd "$LUA_BASENAME"
-
+ 
   if [ $BUILD_JIT ]; then
     make BUILDMODE=dynamic LUAJIT_SO=liblua.dylib MACOSX_DEPLOYMENT_TARGET=$MACOSX_VERSION TARGET_DYLIBPATH=liblua.dylib CC="gcc" CCOPT="$MACOSX_FLAGS -DLUAJIT_ENABLE_LUA52COMPAT" || { echo "Error: failed to build Lua"; exit 1; }
     make install PREFIX="$INSTALL_DIR"
@@ -277,6 +277,8 @@ if [ $BUILD_WXWIDGETS ]; then
   fi
   cd "$WXWIDGETS_BASENAME"
 
+  git reset --hard && git clean -f -d
+
   # checkout the version that was used in wxwidgets upgrade to 3.1.x
   git checkout master
 
@@ -318,6 +320,8 @@ if [ $BUILD_WXLUA ]; then
     git clone "$WXLUA_URL" "$WXLUA_BASENAME" || { echo "Error: failed to get wxlua"; exit 1; }
   fi
   cd "$WXLUA_BASENAME/wxLua"
+
+  git reset --hard && git clean -f -d
 
   git checkout v3.0.0.8-fix
 
@@ -414,7 +418,7 @@ if [ $BUILD_LUASEC ]; then
   # build openSSL
   if [[ ! -d "$OPENSSL_BASENAME" ]]
   then
-    curl -L "$OPENSSL_URL" > "$OPENSSL_FILENAME" || { echo "Error: failed to download OpenSSL"; exit 1; }
+    curl "$OPENSSL_URL" --output "$OPENSSL_FILENAME" || { echo "Error: failed to download OpenSSL"; exit 1; }
     tar -xzf "$OPENSSL_FILENAME"
     rm "$OPENSSL_FILENAME"
   fi

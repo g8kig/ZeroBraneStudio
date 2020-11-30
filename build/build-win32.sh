@@ -202,7 +202,7 @@ if [ $BUILD_LUA ]; then
   then
     if [ $BUILD_JIT ]; then
       git clone "$LUA_URL" "$LUA_BASENAME"
-      (cd "$LUA_BASENAME"; git checkout v2.0.4)
+      (cd "$LUA_BASENAME"; git reset --hard && git clean -f -d ; git checkout v2.0.4)
     else
       wget -c "$LUA_URL" -O "$LUA_FILENAME" || { echo "Error: failed to download Lua"; exit 1; }
       tar -xzf "$LUA_FILENAME"
@@ -283,6 +283,8 @@ if [ $BUILD_WXWIDGETS ]; then
   fi
   cd "$WXWIDGETS_BASENAME"
 
+  git reset --hard && git clean -f -d
+
   # checkout the version that was used in wxwidgets upgrade to 3.1.x
   git checkout master
 
@@ -313,6 +315,8 @@ if [ $BUILD_WXLUA ]; then
     then  git clone "$WXLUA_URL" "$WXLUA_BASENAME" || { echo "Error: failed to get wxlua"; exit 1; }
   fi
   cd "$WXLUA_BASENAME/wxLua"
+
+  git reset --hard && git clean -f -d
 
   git checkout v3.0.0.8-fix
 
@@ -448,6 +452,7 @@ if [ $BUILD_WINAPI ]; then
     git clone "$WINAPI_URL" "$WINAPI_BASENAME"
   fi
   cd "$WINAPI_BASENAME"
+  git reset --hard && git clean -f -d  
   mkdir -p "$INSTALL_DIR/lib/lua/$LUAV/"
   gcc $BUILD_FLAGS -DPSAPI_VERSION=1 -o "$INSTALL_DIR/lib/lua/$LUAV/winapi.dll" winapi.c wutils.c -lpsapi -lmpr -llua$LUAV \
     || { echo "Error: failed to build winapi"; exit 1; }
