@@ -206,14 +206,14 @@ fi
 if [ $BUILD_LUA ]; then
   if [[ ! -d "$LUA_BASENAME" ]]
   then
-    if [ $BUILD_JIT ]; then
+    if [ ! $BUILD_JIT ]; then
+      wget -c "$LUA_URL" -O "$LUA_FILENAME" || { echo "Error: failed to download Lua"; exit 1; }
+      tar -xzf "$LUA_FILENAME"
+      rm "$LUA_FILENAME"
+    else
       git clone "$LUA_URL" "$LUA_BASENAME"
       (cd "$LUA_BASENAME"; git reset --hard && git clean -f -d ; git checkout v2.0.4)
     fi
-  else
-    wget -c "$LUA_URL" -O "$LUA_FILENAME" || { echo "Error: failed to download Lua"; exit 1; }
-    tar -xzf "$LUA_FILENAME"
-    rm "$LUA_FILENAME"
   fi
   cd "$LUA_BASENAME"
 
