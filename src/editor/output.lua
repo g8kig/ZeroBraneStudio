@@ -24,6 +24,7 @@ out:StyleSetFont(wxstc.wxSTC_STYLE_DEFAULT, out:GetFont())
 out:StyleClearAll()
 out:SetMarginWidth(1, 16) -- marker margin
 out:SetMarginType(1, wxstc.wxSTC_MARGIN_SYMBOL)
+out:SetTabWidth(2) -- second position from the end of the previous character
 out:MarkerDefine(StylesGetMarker("message"))
 out:MarkerDefine(StylesGetMarker("error"))
 out:MarkerDefine(StylesGetMarker("prompt"))
@@ -95,7 +96,8 @@ function DisplayOutputNoMarker(...)
   local insertedAt = promptLine == wx.wxNOT_FOUND and out:GetLength() or out:PositionFromLine(promptLine) + inputBound
   local current = out:GetReadOnly()
   out:SetReadOnly(false)
-  out:InsertTextDyn(insertedAt, out.useraw and message or FixUTF8(message, "\022"))
+  out:GotoPos(insertedAt)
+  out:AddTextDyn(out.useraw and message or FixUTF8(message, "\022"))
   out:EmptyUndoBuffer()
   out:SetReadOnly(current)
   out:GotoPos(out:GetLength())
@@ -195,7 +197,11 @@ local function unHideWindow(pidAssign)
         -- use show_async call (ShowWindowAsync) to avoid blocking the IDE
         -- if the app is busy or is being debugged
         win:show_async(action == show and winapi.SW_SHOW or winapi.SW_HIDE)
-        pid = nil -- indicate that unhiding is done
+        -- indicate that unhiding is done, but make sure to
+        -- check late enough for all windows to get created
+        if ide:GetTime() - ((customprocs[pid] or {}).started or 0) > 1 then
+          pid = nil
+        end
       end
     end
   end
